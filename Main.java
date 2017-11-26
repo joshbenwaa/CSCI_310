@@ -1,7 +1,5 @@
 package com.company;
 
-import java.io.Console;
-
 public class Main {
 
     public static void main(String[] args) {
@@ -27,7 +25,11 @@ public class Main {
         }
     }
 
-    public static void PrintVector(int[] v)
+    /**
+     * Prints a vector out to the console
+     * @param v the vector to print
+     */
+    static void PrintVector(int[] v)
     {
         StringBuilder sb = new StringBuilder();
         sb.append('['); sb.append(' ');

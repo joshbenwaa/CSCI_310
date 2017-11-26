@@ -4,10 +4,18 @@ public class Customer extends Thread {
     private Thread t;
     private int CustomerNum;
 
+    /**
+     * Constructor
+     * @param CustomerN customer number
+     */
     Customer(int CustomerN)
     {
         CustomerNum = CustomerN;
     }
+
+    /**
+     * Function called to start thread
+     */
     public void start()
     {
         if(t == null)
@@ -17,6 +25,9 @@ public class Customer extends Thread {
         }
     }
 
+    /**
+     * The work of the thread
+     */
     public void run()
     {
         int Sleep = (int) (Math.random() * 5); //On a scale of 1 to 5 second

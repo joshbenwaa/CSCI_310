@@ -1,17 +1,24 @@
 package com.company;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public final class Bank {
 
-    private static int numberOfCustomers;
-    static int numberOfResources;
+    private static int numberOfCustomers; //Also relates to the number of threads
+    static int numberOfResources; //Number of resource types
     private static int[] available;    //The available amount of each resource
     static int[][] max;    //The maximum demand of each customer
     private static int[][] allocation; //Total Number of Resources being allocated to each thread
     static int Completed = 0;
     private static final Object lock = new Lock();
 
+    /**
+     * Function used to initialize the Bank with the specific number of Resources and number of Customers
+     * @param R Number representing the different types of resources
+     * @param C Number of customers in the Bank
+     */
     static void Initialize(int R, int C)
     {
         numberOfResources = R;
@@ -24,6 +31,14 @@ public final class Bank {
         Main.PrintVector(available);
     }
 
+
+    /**
+     * Function Used to request resources. This function is safely used by synchronizing with the various synchronize, lock, and notify functions.
+     * @param customerNumber The number that referneces the thread/Customer
+     * @param request The resources that are requested
+     * @throws InterruptedException Handles the wait and notify interruptions.
+     *
+     */
     static void requestResources(int customerNumber, int[] request) throws InterruptedException {
         boolean safe = false;
         synchronized (lock)
@@ -84,12 +99,19 @@ public final class Bank {
 
     }
 
+    /**
+     * Function that uses the safety algorithm to determine whether the following request would work.
+     * @param request The request in question of whether putting the system into a unsafe state.
+     * @param num Customer number
+     * @return Used to determine whether function works or not
+     */
     private static boolean isSafe_AfterThisRequest(int[] request, int num)
     {
 
         int index;
         boolean flag;
         int [] need_i;
+        List<Integer> seq = new ArrayList<Integer>();
         //Step 1: Initialize Work and Finish
         int[] Work = Subtract_Arrays(available,request);
         int[][] Temp_Allocation;
@@ -129,18 +151,30 @@ public final class Bank {
                         return false; //There exists a process that can't be finished
                     }
                 }
+                System.out.println("Safe Customer Sequence: ");
+                System.out.print("[ ");
+                for(int a = 0; a < seq.size(); a++)
+                {
+                    System.out.print(seq.get(a) + " ");
+                }
+                System.out.print("]\n");
                 return true; //All Process are finished
             }
             //Else a process is found
             Work = Add_Arrays(Work, GetRow(allocation, index));
             Finish[index] = true;
-
+            seq.add(index);
             //Reset index
             index = 0;
         }
 
     }
 
+    /**
+     * Simply just adds the requested resources to allocation and subtracts from available
+     * @param request The requested resources
+     * @param num The customer number
+     */
     private static void ProcessRequest(int[] request, int num)
     {
         available = Subtract_Arrays(available,request);
@@ -150,6 +184,10 @@ public final class Bank {
         }
     }
 
+    /**
+     * Releases the resources from the customer
+     * @param customerNumber the number of the customer thread
+     */
     static  void releaseResources(int customerNumber) {
         synchronized (lock)
         {
@@ -174,6 +212,12 @@ public final class Bank {
 
     }
 
+    /**
+     * Determines if array1 is less than or equal to array2
+     * @param array1 An array
+     * @param array2 An array
+     * @return returns true if array1 <= array2
+     */
     private static boolean Array1_LTEQ_Array2(int[] array1, int[] array2) {
         if (array1 != null && array2 != null){
             if (array1.length != array2.length)
@@ -190,6 +234,12 @@ public final class Bank {
         return true;
     }
 
+    /**
+     * Gets the row at value "row" of the Matrix
+     * @param Matrix The matrix to retrieve from
+     * @param row The row in matrix to retrieve from
+     * @return the row of Matrix in question
+     */
     private static int[] GetRow(int[][] Matrix, int row)
     {
         int[] result = new int[Matrix[row].length];
@@ -200,6 +250,12 @@ public final class Bank {
         return result;
     }
 
+    /**
+     * Subtracts two vectors
+     * @param array1 a vector
+     * @param array2 a vector
+     * @return array1 - array2
+     */
     private static int[] Subtract_Arrays(int[] array1, int[] array2)
     {
         int[] result = new int[array1.length];
@@ -210,6 +266,12 @@ public final class Bank {
         return result;
     }
 
+    /**
+     * Adding two vectors
+     * @param array1 a vector
+     * @param array2 a vector
+     * @return array1 - array2
+     */
     private static int[] Add_Arrays(int[] array1, int[] array2)
     {
         int[] result = new int[array1.length];
@@ -220,6 +282,12 @@ public final class Bank {
         return result;
     }
 
+    /**
+     * Calculates the need vector from the max and allocation matrix
+     * @param m max matrix
+     * @param a allocation matrix
+     * @return the need vector max - allocation
+     */
     private static int[][] Calculate_NeedArray(int[][] m, int[][] a)
     {
         int[][] need = new  int[m.length][m[0].length];
