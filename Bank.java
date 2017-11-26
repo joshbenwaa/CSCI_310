@@ -178,9 +178,15 @@ public final class Bank {
     private static void ProcessRequest(int[] request, int num)
     {
         available = Subtract_Arrays(available,request);
+        System.out.println("Allocation Matrix After Request from Customer " + num + ": ");
         for(int k = 0; k < allocation[num].length; k++)
         {
             allocation[num][k] = allocation[num][k] + request[k];
+        }
+
+        for(int j = 0; j < numberOfCustomers; j++)
+        {
+            Main.PrintVector(allocation[j]);
         }
     }
 
@@ -204,6 +210,11 @@ public final class Bank {
             }
             System.out.println("New available array:");
             System.out.println(Arrays.toString(available));
+            System.out.println("New Allocation Matrix after release from Customer " + customerNumber + ": ");
+            for(int j = 0; j < numberOfCustomers; j++)
+            {
+                System.out.println(Arrays.toString((allocation[j])));
+            }
 
             lock.notify();
         }

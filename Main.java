@@ -3,10 +3,10 @@ package com.company;
 public class Main {
 
     public static void main(String[] args) {
-//        int n = Integer.parseInt(args[0]); //Number of Resources
-//        int m = Integer.parseInt(args[1]); //Number of Customers
-        int R = 4; //Number of Resources
-        int C = 5; //Number of Customers
+        int R = Integer.parseInt(args[0]); //Number of Resources
+        int C = Integer.parseInt(args[1]); //Number of Customers
+//        int R = 4; //Number of Resources
+//        int C = 5; //Number of Customers
         Bank.Initialize(R,C);
 
         Customer CustomerArray[] = new Customer[C];
