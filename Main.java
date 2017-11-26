@@ -7,19 +7,23 @@ public class Main {
     public static void main(String[] args) {
 //        int n = Integer.parseInt(args[0]); //Number of Resources
 //        int m = Integer.parseInt(args[1]); //Number of Customers
-        int n = 4; //Number of Resources
-        int m = 5; //Number of Customers
-        Bank.Initialize(m,n);
+        int R = 4; //Number of Resources
+        int C = 5; //Number of Customers
+        Bank.Initialize(R,C);
 
-        Customer CustomerArray[] = new Customer[n];
+        Customer CustomerArray[] = new Customer[C];
         //Initialize
-        for(int i = 0; i < n; i++)
+        for(int i = 0; i < C; i++)
         {
             CustomerArray[i] = new Customer(i);
         }
-        for(int i = 0; i < n; i++)
+        for(int i = 0; i < C; i++)
         {
             CustomerArray[i].start();
+        }
+        while(Bank.Completed < C)
+        {
+            Thread.yield();
         }
     }
 

@@ -2,22 +2,6 @@ package com.company;
 
 public final class RandomGenerator{
 
-    public static int[][] RandomNeedArray(int [][] Max, int NumberOfCustomers, int NumberOfResources)
-    {
-        int[][] result = new int [NumberOfCustomers][NumberOfResources];
-        int[] TotalResources = new int[NumberOfResources];
-
-        for(int i = 0; i < NumberOfCustomers; i++)
-        {
-            for(int j = 0; j < NumberOfResources; j++)
-            {
-                randomWithRange(0,Max[i][j]);
-            }
-        }
-
-        return result;
-    }
-
     static int[] RandomRequestVector(int[][] Max, int CustomerNum, int NumberOfResources)
     {
         int[] result = new int[NumberOfResources];
@@ -41,12 +25,23 @@ public final class RandomGenerator{
         return result;
     }
 
-    static int[] RandomAvailableVector(int NumberOfResources)
+    static int[] RandomAvailableVector(int NumberOfResources, int NumberOfCustomers)
     {
         int[] result = new int[NumberOfResources];
+        int[] Total = new int[NumberOfResources];
+        int slightlyAboveTotal;
+        for(int k = 0; k < NumberOfResources; k++)
+        {
+            for(int j = 0; j < NumberOfCustomers; j++)
+            {
+                Total[k] += Bank.max[j][k];
+            }
+        }
+
         for(int i = 0; i < NumberOfResources; i++)
         {
-            result[i] = randomWithRange(0,10);
+            slightlyAboveTotal = randomWithRange(Total[i],Total[i] + 3);
+            result[i] = randomWithRange(Total[i],slightlyAboveTotal); //Randomly just slightly more than the total demand
         }
         return result;
     }

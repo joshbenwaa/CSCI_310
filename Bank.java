@@ -1,81 +1,106 @@
 package com.company;
 
+import java.util.Arrays;
+
 public final class Bank {
 
-    static int numberOfCustomers;
+    private static int numberOfCustomers;
     static int numberOfResources;
-    static int[] available;    //The available amount of each resource
+    private static int[] available;    //The available amount of each resource
     static int[][] max;    //The maximum demand of each customer
-    static int[][] allocation; //Total Number of Resources being allocated to each thread
-    static int[][] need; //the remaining needs of each customer
-    private final Object lock = new Lock();
+    private static int[][] allocation; //Total Number of Resources being allocated to each thread
+    static int Completed = 0;
+    private static final Object lock = new Lock();
 
-    public static void Initialize(int m, int n)
+    static void Initialize(int R, int C)
     {
-        numberOfResources = m;
-        numberOfCustomers = n;
-        available = RandomGenerator.RandomAvailableVector((numberOfResources));
+        numberOfResources = R;
+        numberOfCustomers = C;
         max = RandomGenerator.RandomMaximumArray(numberOfCustomers,numberOfResources);
+        available = RandomGenerator.RandomAvailableVector(numberOfResources, numberOfCustomers);
         allocation = new int[numberOfCustomers][numberOfResources];
 
         System.out.println("Initial Available Array: ");
         Main.PrintVector(available);
     }
 
-    //Methods
-//    public static void addCustomer(int customerNum, int[] maximumDemand)
-//    {
-//
-//    }
-
-    public static boolean isSafe()
-    {
-        int index;
-        boolean flag;
-        //Step 1: Initialize Work and Finish
-        int[] Work = available;
-        boolean[] Finish = new boolean[numberOfCustomers];
-        for(int i = 0; i < numberOfCustomers; i++)
+    static void requestResources(int customerNumber, int[] request) throws InterruptedException {
+        boolean safe = false;
+        synchronized (lock)
         {
-            Finish[i] = false;
-        }
+            System.out.println("Customer " + customerNumber + " Making Request for: ");
+            Main.PrintVector(request);
+            while (!safe)
 
-        //Step 2: Find an index i such that Finish[i] = false and Need <= Work
-        index = 0;
-        while(true) {
-            flag = (!Finish[index]) && (Array1_LTEQ_Array2(Subtract_Arrays(GetRow(max, index), GetRow(allocation, index)), Work));
-            while (!flag && (index < Finish.length)) //There is a process that isn't finished and we haven't made it to the end of the array
             {
-                index++;
-                flag = !Finish[index] && Array1_LTEQ_Array2(Subtract_Arrays(GetRow(max, index), GetRow(allocation, index)), Work);
-            }
-            if (!flag && (index == Finish.length)) //Got to the end without finding a index STEP 4
-            {
-                for (int j = 0; j < numberOfCustomers; j++) {
-                    if (!Finish[j]) {
-                        return false; //There exists a process that can't be finished
+                //Step 1: Request <= Need
+                for (int i = 0; i < Bank.numberOfResources; i++) {
+                    if (request[i] > (Bank.max[customerNumber][i] - Bank.allocation[customerNumber][i])) {
+                        return;
                     }
                 }
-                return true; //All Process are finished
-            }
-            //Else a process is found
-            Work = Add_Arrays(Work, GetRow(allocation, index));
-            Finish[index] = true;
+                safe = true;
+                //Step 2: Request <= Available
+                for (int i = 0; i < Bank.numberOfResources; i++) {
+                    if (request[i] > Bank.available[i]) {
+                        try {
+                            synchronized (lock) {
+                                safe = false;
+                                System.out.println("Customer" + customerNumber + " must wait until the resources are available");
+                                lock.wait(); //Wait until the resources are available
+                            }
 
-            //Reset index
-            index = 0;
+                        } catch (InterruptedException ignored) {
+                        }
+                    }
+                }
+
+                //Step 3: Pretend it happens and then check if it is safe to do;
+                if (Bank.isSafe_AfterThisRequest(request, customerNumber)) //Request is safe
+                {
+                    safe = true;
+                } else //Request must wait
+                {
+                    try {
+                        synchronized (lock) {
+                            System.out.println("Customer" + customerNumber + " must wait until the system would be safe");
+                            lock.wait(); //Wait until the resources are available
+                        }
+                    } catch (InterruptedException ignored) {
+                    }
+                }
+            }
+            synchronized (lock) {
+                //Request was safe, now can change the banks arrays
+                Bank.ProcessRequest(request, customerNumber);
+                System.out.println("Resource Sent to customer: " + customerNumber);
+                System.out.println("New Available Array: ");
+                Main.PrintVector(available);
+
+                lock.notify(); //Wait until the resources are available
+            }
         }
+
 
     }
 
-    public static boolean isSafe_AfterThisRequest(int[] request, int num)
+    private static boolean isSafe_AfterThisRequest(int[] request, int num)
     {
 
         int index;
         boolean flag;
+        int [] need_i;
         //Step 1: Initialize Work and Finish
         int[] Work = Subtract_Arrays(available,request);
-        int[][] Temp_Allocation = allocation;
+        int[][] Temp_Allocation;
+        Temp_Allocation = new int[allocation.length][];
+        for(int i = 0; i < allocation.length; i++)
+        {
+            int[] aMatrix = allocation[i];
+            int   aLength = aMatrix.length;
+            Temp_Allocation[i] = new int[aLength];
+            System.arraycopy(aMatrix, 0, Temp_Allocation[i], 0, aLength);
+        }
         for(int k = 0; k < allocation[num].length; k++)
         {
             Temp_Allocation[num][k] = Temp_Allocation[num][k] + request[k];
@@ -89,13 +114,15 @@ public final class Bank {
         //Step 2: Find an index i such that Finish[i] = false and Need <= Work
         index = 0;
         while(true) {
-            flag = (!Finish[index]) && (Array1_LTEQ_Array2(Subtract_Arrays(GetRow(max, index), GetRow(Temp_Allocation, index)), Work));
-            while (!flag && (index < Finish.length)) //There is a process that isn't finished and we haven't made it to the end of the array
+            need_i = GetRow(Calculate_NeedArray(max,Temp_Allocation),index);
+            flag = (!Finish[index]) && (Array1_LTEQ_Array2(need_i, Work));
+            while ((!flag && (index < Finish.length - 1))) //There is a process that isn't finished and we haven't made it to the end of the array
             {
                 index++;
-                flag = !Finish[index] && Array1_LTEQ_Array2(Subtract_Arrays(GetRow(max, index), GetRow(Temp_Allocation, index)), Work);
+                need_i = GetRow(Calculate_NeedArray(max,Temp_Allocation),index);
+                flag = (!Finish[index]) && (Array1_LTEQ_Array2(need_i, Work));
             }
-            if (!flag && (index == Finish.length)) //Got to the end without finding a index STEP 4
+            if (!flag && (index == Finish.length - 1)) //Got to the end without finding a index STEP 4
             {
                 for (int j = 0; j < numberOfCustomers; j++) {
                     if (!Finish[j]) {
@@ -114,7 +141,7 @@ public final class Bank {
 
     }
 
-    public static void ProcessRequest(int[] request, int num)
+    private static void ProcessRequest(int[] request, int num)
     {
         available = Subtract_Arrays(available,request);
         for(int k = 0; k < allocation[num].length; k++)
@@ -123,11 +150,31 @@ public final class Bank {
         }
     }
 
-    public static void releaseResources(int customerNumber, int[] release) {
+    static  void releaseResources(int customerNumber) {
+        synchronized (lock)
+        {
+            int[] release = allocation[customerNumber];
+            System.out.println("Customer " + customerNumber + " is releasing its resources of");
+            System.out.println(Arrays.toString(release));
+
+            for (int i = 0; i < release.length; i++)
+            {
+                available[i] += release[i];
+                max[customerNumber][i] -= release[i];
+                allocation[customerNumber][i] = 0;
+
+            }
+            System.out.println("New available array:");
+            System.out.println(Arrays.toString(available));
+
+            lock.notify();
+        }
+
+
 
     }
 
-    public static boolean Array1_LTEQ_Array2(int[] array1, int[] array2) {
+    private static boolean Array1_LTEQ_Array2(int[] array1, int[] array2) {
         if (array1 != null && array2 != null){
             if (array1.length != array2.length)
                 return false;
@@ -143,7 +190,7 @@ public final class Bank {
         return true;
     }
 
-    public static int[] GetRow(int [][] Matrix, int row)
+    private static int[] GetRow(int[][] Matrix, int row)
     {
         int[] result = new int[Matrix[row].length];
         for(int i = 0; i < Matrix[row].length; i++)
@@ -153,7 +200,7 @@ public final class Bank {
         return result;
     }
 
-    public static int[] Subtract_Arrays(int[] array1, int[] array2)
+    private static int[] Subtract_Arrays(int[] array1, int[] array2)
     {
         int[] result = new int[array1.length];
         for(int i = 0; i < array1.length; i++)
@@ -163,7 +210,7 @@ public final class Bank {
         return result;
     }
 
-    public static int[] Add_Arrays(int[] array1, int[] array2)
+    private static int[] Add_Arrays(int[] array1, int[] array2)
     {
         int[] result = new int[array1.length];
         for(int i = 0; i < array1.length; i++)
@@ -171,6 +218,19 @@ public final class Bank {
             result[i] = array1[i] - array2[i];
         }
         return result;
+    }
+
+    private static int[][] Calculate_NeedArray(int[][] m, int[][] a)
+    {
+        int[][] need = new  int[m.length][m[0].length];
+        for(int i = 0; i < need.length; i++)
+        {
+            for(int j = 0; j < need[0].length; j++)
+            {
+                need[i][j] = m[i][j] - a[i][j];
+            }
+        }
+        return need;
     }
 }
 
